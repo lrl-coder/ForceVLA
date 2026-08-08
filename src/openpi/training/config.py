@@ -415,6 +415,25 @@ class LeRobotForcevlaDataConfig(DataConfigFactory):
     """
     # Action keys that will be used to read the action sequence from the dataset.
     action_sequence_keys: Sequence[str] = ("action",)
+    delta_action_mask: Sequence[bool] | None = dataclasses.field(
+        default_factory=lambda: list(_transforms.make_bool_mask(6, -1))
+    )
+    output_action_dim: int = 7
+    repack_transforms: tyro.conf.Suppress[_transforms.Group] = dataclasses.field(
+        default=_transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "image": "observation.image",
+                        "wrist_image": "observation.wrist_image",
+                        "state": "observation.state",
+                        "actions": "action",
+                        "prompt": "prompt",
+                    }
+                )
+            ]
+        )
+    )
 
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
@@ -429,19 +448,6 @@ class LeRobotForcevlaDataConfig(DataConfigFactory):
         print("-"*100)
         print("ForceVla data is loading..")
         print("-"*100)
-        repack_transform = _transforms.Group(
-            inputs=[
-                _transforms.RepackTransform(
-                    {
-                        "image": "observation.image",
-                        "wrist_image": "observation.wrist_image",
-                        "state": "observation.state",
-                        "actions": "action",
-                        "prompt": "prompt",
-                    }
-                )
-            ]
-        )
         # The data transforms are applied to the data coming from the dataset *and* during inference.
         # Below, we define the transforms for data going into the model (``inputs``) and the transforms
         # for data coming out of the model (``outputs``) (the latter is only used during inference).
@@ -450,7 +456,7 @@ class LeRobotForcevlaDataConfig(DataConfigFactory):
         # replace the transforms below with your own.
         data_transforms = _transforms.Group(
             inputs=[forcevla_policy.Forcevla_inputs(action_dim=model_config.action_dim, model_type=model_config.model_type)],
-            outputs=[forcevla_policy.Forcevla_outputs()],
+            outputs=[forcevla_policy.Forcevla_outputs(action_dim=self.output_action_dim)],
         )
         # One additional data transform: pi0 models are trained on delta actions (relative to the first
         # state in each action chunk). IF your data has ``absolute`` actions (e.g. target joint angles)
@@ -465,10 +471,9 @@ class LeRobotForcevlaDataConfig(DataConfigFactory):
         # TODO(karl): comment this out once we have updated the Libero checkpoints to not use
         # the delta action transform
         ## action: xyz  + rpy + gripper
-        delta_action_mask = _transforms.make_bool_mask(6, -1)
         data_transforms = data_transforms.push(
-            inputs=[_transforms.DeltaActions(delta_action_mask)],
-            outputs=[_transforms.AbsoluteActions(delta_action_mask)],
+            inputs=[_transforms.DeltaActions(self.delta_action_mask)],
+            outputs=[_transforms.AbsoluteActions(self.delta_action_mask)],
         )
         # Model transforms include things like tokenizing the prompt and action targets
         # You do not need to change anything here for your own dataset.
@@ -477,7 +482,7 @@ class LeRobotForcevlaDataConfig(DataConfigFactory):
         # We return all data transforms for training and inference. No need to change anything here.
         return dataclasses.replace(
             self.create_base_config(assets_dirs),
-            repack_transforms=repack_transform,
+            repack_transforms=self.repack_transforms,
             data_transforms=data_transforms,
             model_transforms=model_transforms,
             action_sequence_keys=self.action_sequence_keys,
@@ -579,6 +584,13 @@ FORCEVLA_INPUT_FORCE_REPO_IDS = (
     "flexiv_wipe_board_inputForce",
 )
 
+DATASET_8HZ_REPO_IDS = [
+    "/root/autodl-tmp/dataset-8Hz/flip_box",
+    "/root/autodl-tmp/dataset-8Hz/insert_plug",
+    "/root/autodl-tmp/dataset-8Hz/press_button",
+    "/root/autodl-tmp/dataset-8Hz/wipe_board",
+]
+
 
 def _forcevla_lora_config(
     *,
@@ -601,6 +613,52 @@ def _forcevla_lora_config(
         freeze_filter=pi0_force.Pi0_GuidanceConfig(
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),
+        ema_decay=None,
+        batch_size=batch_size,
+    )
+
+
+def _forcevla_8hz_lora_config(
+    *,
+    name: str,
+    repo_id: str | Sequence[str],
+    asset_id: str | None = None,
+    num_train_steps: int = 30_000,
+    batch_size: int = 4,
+) -> TrainConfig:
+    model = pi0_force.Pi0_GuidanceConfig(
+        paligemma_variant="gemma_2b_lora",
+        action_expert_variant="gemma_300m_lora",
+        proprio_dim=8,
+        force_dim=6,
+    )
+    return TrainConfig(
+        name=name,
+        model=model,
+        data=LeRobotForcevlaDataConfig(
+            repo_id=repo_id,
+            assets=AssetsConfig(asset_id=asset_id),
+            base_config=DataConfig(prompt_from_task=True),
+            delta_action_mask=list(_transforms.make_bool_mask(7, -1)),
+            output_action_dim=8,
+            repack_transforms=_transforms.Group(
+                inputs=[
+                    _transforms.RepackTransform(
+                        {
+                            "image": "observation.images.third_view",
+                            "wrist_image": "observation.images.wrist",
+                            "state": "observation.state",
+                            "force": "observation.wrench_compensated",
+                            "actions": "action",
+                            "prompt": "prompt",
+                        }
+                    )
+                ]
+            ),
+        ),
+        weight_loader=weight_loaders.Pi0GuidanceWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=num_train_steps,
+        freeze_filter=model.get_freeze_filter(),
         ema_decay=None,
         batch_size=batch_size,
     )
@@ -880,6 +938,41 @@ _CONFIGS = [
         asset_id="forcevla_all_input_force",
         num_train_steps=30_000,
         batch_size=16,
+    ),
+    _forcevla_8hz_lora_config(
+        name="forcevla_8hz_all_lora",
+        repo_id=DATASET_8HZ_REPO_IDS,
+        asset_id="dataset_8hz_all",
+        num_train_steps=30_000,
+        batch_size=16,
+    ),
+    _forcevla_8hz_lora_config(
+        name="forcevla_8hz_flip_box_lora",
+        repo_id="/root/autodl-tmp/dataset-8Hz/flip_box",
+        asset_id="dataset_8hz_flip_box",
+        num_train_steps=10_000,
+        batch_size=4,
+    ),
+    _forcevla_8hz_lora_config(
+        name="forcevla_8hz_insert_plug_lora",
+        repo_id="/root/autodl-tmp/dataset-8Hz/insert_plug",
+        asset_id="dataset_8hz_insert_plug",
+        num_train_steps=10_000,
+        batch_size=4,
+    ),
+    _forcevla_8hz_lora_config(
+        name="forcevla_8hz_press_button_lora",
+        repo_id="/root/autodl-tmp/dataset-8Hz/press_button",
+        asset_id="dataset_8hz_press_button",
+        num_train_steps=10_000,
+        batch_size=4,
+    ),
+    _forcevla_8hz_lora_config(
+        name="forcevla_8hz_wipe_board_lora",
+        repo_id="/root/autodl-tmp/dataset-8Hz/wipe_board",
+        asset_id="dataset_8hz_wipe_board",
+        num_train_steps=10_000,
+        batch_size=4,
     ),
     #
     # Debugging configs.

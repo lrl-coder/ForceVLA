@@ -75,6 +75,8 @@ class Pi0_GuidanceConfig(_model.BaseModelConfig):
     action_dim: int = 32
     action_horizon: int = 50
     max_token_len: int = 48
+    proprio_dim: int = 7
+    force_dim: int = 6
 
     @property
     @override
@@ -145,6 +147,8 @@ class Pi0_GuidanceConfig(_model.BaseModelConfig):
 class Pi0_Guidance(_model.BaseModel):
     def __init__(self, config: Pi0_GuidanceConfig, rngs: nnx.Rngs):
         super().__init__(config.action_dim, config.action_horizon, config.max_token_len)
+        self.proprio_dim = config.proprio_dim
+        self.force_dim = config.force_dim
         paligemma_config = _gemma.get_config(config.paligemma_variant)
         action_expert_config = _gemma.get_config(config.action_expert_variant)
         # TODO: rewrite gemma in NNX. For now, use bridge.
@@ -231,9 +235,10 @@ class Pi0_Guidance(_model.BaseModel):
         input_mask = []
         ar_mask = []
         tokens = []
-        # obs.state is shape [b, 13] (13 = 7 prio + 6 force, ee pose: xyz+rpy, gripper)
+        # obs.state is padded to action_dim. The first proprio_dim entries are robot state;
+        # the next force_dim entries are force/torque.
         observations = jnp.zeros_like(obs.state)
-        observations = observations.at[:, :7].set(obs.state[:, :7]) ## robot state, xyz + rpy + gripper
+        observations = observations.at[:, : self.proprio_dim].set(obs.state[:, : self.proprio_dim])
         state_token = self.state_proj(observations)[:, None, :] # [b, 1, d]
         # state_token = self.state_proj(obs.state)[:, None, :] # [b, 1, d]
         tokens.append(state_token)
@@ -256,7 +261,9 @@ class Pi0_Guidance(_model.BaseModel):
         tokens = jnp.concatenate(tokens, axis=1)
         input_mask = jnp.concatenate(input_mask, axis=1)
         ar_mask = jnp.array(ar_mask)
-        force_tokens = self.force_in_proj(obs.state[:, 7:13])[:, None, :] # [b, 1, 2emb]
+        force_start = self.proprio_dim
+        force_end = force_start + self.force_dim
+        force_tokens = self.force_in_proj(obs.state[:, force_start:force_end])[:, None, :] # [b, 1, 2emb]
         return tokens, input_mask, ar_mask, force_tokens
 
     @override

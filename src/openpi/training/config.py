@@ -629,6 +629,7 @@ def _forcevla_8hz_lora_config(
     model = pi0_force.Pi0_GuidanceConfig(
         paligemma_variant="gemma_2b_lora",
         action_expert_variant="gemma_300m_lora",
+        action_horizon=16,
         proprio_dim=8,
         force_dim=6,
     )

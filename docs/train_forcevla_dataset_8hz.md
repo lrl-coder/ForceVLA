@@ -63,12 +63,14 @@ state[14:32] = padding
 动作使用：
 
 ```text
-action_horizon = 50
+action_horizon = 16
 action_dim     = 32
 前 8 维         = 数据集 action
 后 24 维        = padding
 delta mask     = 前 7 个关节转 delta，夹爪保持 absolute
 ```
+
+`dataset-8Hz` 是 8Hz，`action_horizon=16` 对应约 2 秒动作 chunk。
 
 ## 4. 计算归一化统计
 
@@ -216,4 +218,3 @@ python scripts/train.py forcevla_8hz_all_lora --help
 ```bash
 find /root/autodl-tmp/ForceVLA/checkpoints/forcevla_8hz_all_lora/dataset_8hz_all_lora_v1 -maxdepth 2 -type d | sort
 ```
-

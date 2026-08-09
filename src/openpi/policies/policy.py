@@ -66,6 +66,10 @@ class Policy(BasePolicy):
     def metadata(self) -> dict[str, Any]:
         return self._metadata
 
+    def reset_rng(self) -> None:
+        """Reset stateless diffusion sampling to the policy's initial PRNG key."""
+        self._rng = jax.random.key(0)
+
 
 class PolicyRecorder(_base_policy.BasePolicy):
     """Records the policy's behavior to disk."""

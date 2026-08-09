@@ -35,6 +35,7 @@ def create_trained_policy(
     sample_kwargs: dict[str, Any] | None = None,
     default_prompt: str | None = None,
     norm_stats: dict[str, transforms.NormStats] | None = None,
+    param_dtype: jnp.dtype = jnp.bfloat16,
 ) -> _policy.Policy:
     """Create a policy from a trained checkpoint.
 
@@ -48,12 +49,13 @@ def create_trained_policy(
             data if it doesn't already exist.
         norm_stats: The norm stats to use for the policy. If not provided, the norm stats will be loaded
             from the checkpoint directory.
+        param_dtype: Dtype used when restoring model parameters for inference.
     """
     repack_transforms = repack_transforms or transforms.Group()
     checkpoint_dir = download.maybe_download(str(checkpoint_dir))
 
     logging.info("Loading model...")
-    model = train_config.model.load(_model.restore_params(checkpoint_dir / "params", dtype=jnp.bfloat16))
+    model = train_config.model.load(_model.restore_params(checkpoint_dir / "params", dtype=param_dtype))
 
     data_config = train_config.data.create(train_config.assets_dirs, train_config.model)
     if norm_stats is None:

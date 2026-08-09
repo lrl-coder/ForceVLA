@@ -108,6 +108,7 @@ python scripts/train.py forcevla_8hz_all_lora \
   --exp-name dataset_8hz_all_lora_v1 \
   --checkpoint-base-dir /root/autodl-tmp/ForceVLA/checkpoints \
   --batch-size 16 \
+  --num-workers 0 \
   --num-train-steps 30000 \
   --save-interval 2000 \
   --keep-period 10000 \
@@ -123,6 +124,7 @@ python scripts/train.py forcevla_8hz_all_lora \
   --exp-name dataset_8hz_all_lora_v1 \
   --checkpoint-base-dir /root/autodl-tmp/ForceVLA/checkpoints \
   --batch-size 16 \
+  --num-workers 0 \
   --num-train-steps 30000 \
   --save-interval 2000 \
   --keep-period 10000 \
@@ -144,10 +146,11 @@ python scripts/train.py forcevla_8hz_all_lora \
   --exp-name dataset_8hz_all_lora_v1 \
   --checkpoint-base-dir /root/autodl-tmp/ForceVLA/checkpoints \
   --batch-size 16 \
+  --num-workers 0 \
   --num-train-steps 30000 \
   --save-interval 2000 \
   --keep-period 10000 \
-  --no-wandb-enabled \
+  --wandb-enabled \
   --resume
 ```
 

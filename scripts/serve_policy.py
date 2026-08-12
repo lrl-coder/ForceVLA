@@ -28,9 +28,13 @@ import zmq
 
 LOGGER = logging.getLogger("forcevla.serve_policy")
 
-DEFAULT_CHECKPOINT = Path(
-    "/root/autodl-tmp/ForceVLA/checkpoints/forcevla_8hz_all_lora/"
-    "dataset_8hz_all_lora_v1/29999"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_CHECKPOINT = (
+    PROJECT_ROOT
+    / "checkpoints"
+    / "forcevla_8hz_all_lora"
+    / "dataset_8hz_all_lora_v1"
+    / "29999"
 )
 DEFAULT_CONFIG = "forcevla_8hz_all_lora"
 

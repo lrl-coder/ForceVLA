@@ -3,16 +3,15 @@
 ## 1. 进入环境
 
 ```bash
-source /root/miniconda3/etc/profile.d/conda.sh
-conda activate /root/autodl-tmp/conda_data/envs/forcevla
+conda activate forcevla
 
-export HF_HOME=/root/autodl-tmp/hf_cache
-export HF_LEROBOT_HOME=/root/autodl-tmp/lerobot_data
-export OPENPI_DATA_HOME=/root/autodl-tmp/openpi_cache
+export HF_HOME=../hf_cache
+export HF_LEROBOT_HOME=../lerobot_data
+export OPENPI_DATA_HOME=../openpi_cache
 export OMP_NUM_THREADS=8
 
-cd /root/autodl-tmp/ForceVLA
-mkdir -p /root/autodl-tmp/ForceVLA/checkpoints
+cd ./ForceVLA
+mkdir -p ./checkpoints
 ```
 
 ## 2. 已添加的数据配置
@@ -26,10 +25,10 @@ forcevla_8hz_all_lora
 包含 4 个 LeRobot 2.1 数据集：
 
 ```text
-/root/autodl-tmp/dataset-8Hz/flip_box
-/root/autodl-tmp/dataset-8Hz/insert_plug
-/root/autodl-tmp/dataset-8Hz/press_button
-/root/autodl-tmp/dataset-8Hz/wipe_board
+../dataset-8Hz/flip_box
+../dataset-8Hz/insert_plug
+../dataset-8Hz/press_button
+../dataset-8Hz/wipe_board
 ```
 
 单任务排查配置：
@@ -89,7 +88,7 @@ python scripts/compute_norm_stats.py --config-name forcevla_8hz_all_lora --max-f
 输出位置：
 
 ```text
-/root/autodl-tmp/ForceVLA/assets/forcevla_8hz_all_lora/dataset_8hz_all
+./assets/forcevla_8hz_all_lora/dataset_8hz_all
 ```
 
 单任务示例：
@@ -106,7 +105,7 @@ python scripts/compute_norm_stats.py --config-name forcevla_8hz_flip_box_lora
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 \
 python scripts/train.py forcevla_8hz_all_lora \
   --exp-name dataset_8hz_all_lora_v1 \
-  --checkpoint-base-dir /root/autodl-tmp/ForceVLA/checkpoints \
+  --checkpoint-base-dir ./checkpoints \
   --batch-size 16 \
   --num-workers 0 \
   --num-train-steps 30000 \
@@ -122,7 +121,7 @@ python scripts/train.py forcevla_8hz_all_lora \
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 \
 python scripts/train.py forcevla_8hz_all_lora \
   --exp-name dataset_8hz_all_lora_v1 \
-  --checkpoint-base-dir /root/autodl-tmp/ForceVLA/checkpoints \
+  --checkpoint-base-dir ./checkpoints \
   --batch-size 16 \
   --num-workers 0 \
   --num-train-steps 30000 \
@@ -135,7 +134,7 @@ python scripts/train.py forcevla_8hz_all_lora \
 权重保存位置：
 
 ```text
-/root/autodl-tmp/ForceVLA/checkpoints/forcevla_8hz_all_lora/dataset_8hz_all_lora_v1/<step>/params
+./checkpoints/forcevla_8hz_all_lora/dataset_8hz_all_lora_v1/<step>/params
 ```
 
 ## 6. 断点续训
@@ -144,7 +143,7 @@ python scripts/train.py forcevla_8hz_all_lora \
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 \
 python scripts/train.py forcevla_8hz_all_lora \
   --exp-name dataset_8hz_all_lora_v1 \
-  --checkpoint-base-dir /root/autodl-tmp/ForceVLA/checkpoints \
+  --checkpoint-base-dir ./checkpoints \
   --batch-size 16 \
   --num-workers 0 \
   --num-train-steps 30000 \
@@ -161,7 +160,7 @@ python scripts/train.py forcevla_8hz_all_lora \
   实验名，也是 checkpoint 子目录名。
 
 --checkpoint-base-dir
-  checkpoint 根目录；本任务固定为 /root/autodl-tmp/ForceVLA/checkpoints。
+  checkpoint 根目录；本任务使用项目内的 ./checkpoints。
 
 --batch-size
   全局 batch size。LoRA 默认 16；显存不够可改 8 或 4。
@@ -193,7 +192,7 @@ python scripts/compute_norm_stats.py --config-name forcevla_8hz_insert_plug_lora
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 \
 python scripts/train.py forcevla_8hz_insert_plug_lora \
   --exp-name insert_plug_lora_v1 \
-  --checkpoint-base-dir /root/autodl-tmp/ForceVLA/checkpoints \
+  --checkpoint-base-dir ./checkpoints \
   --batch-size 4 \
   --num-train-steps 10000 \
   --save-interval 1000 \
@@ -219,5 +218,5 @@ python scripts/train.py forcevla_8hz_all_lora --help
 检查 checkpoint：
 
 ```bash
-find /root/autodl-tmp/ForceVLA/checkpoints/forcevla_8hz_all_lora/dataset_8hz_all_lora_v1 -maxdepth 2 -type d | sort
+find ./checkpoints/forcevla_8hz_all_lora/dataset_8hz_all_lora_v1 -maxdepth 2 -type d | sort
 ```

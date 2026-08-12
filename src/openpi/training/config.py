@@ -34,6 +34,15 @@ ModelType: TypeAlias = _model.ModelType
 # Work around a tyro issue with using nnx.filterlib.Filter directly.
 Filter: TypeAlias = nnx.filterlib.Filter
 
+_PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[3]
+_DATASET_8HZ_ROOT = _PROJECT_ROOT.parent / "dataset-8Hz"
+
+
+def _dataset_8hz_path(name: str) -> str:
+    """Return a portable path for the optional training datasets beside the repo."""
+
+    return str(_DATASET_8HZ_ROOT / name)
+
 
 @dataclasses.dataclass(frozen=True)
 class AssetsConfig:
@@ -585,10 +594,10 @@ FORCEVLA_INPUT_FORCE_REPO_IDS = (
 )
 
 DATASET_8HZ_REPO_IDS = [
-    "/root/autodl-tmp/dataset-8Hz/flip_box",
-    "/root/autodl-tmp/dataset-8Hz/insert_plug",
-    "/root/autodl-tmp/dataset-8Hz/press_button",
-    "/root/autodl-tmp/dataset-8Hz/wipe_board",
+    _dataset_8hz_path("flip_box"),
+    _dataset_8hz_path("insert_plug"),
+    _dataset_8hz_path("press_button"),
+    _dataset_8hz_path("wipe_board"),
 ]
 
 
@@ -949,28 +958,28 @@ _CONFIGS = [
     ),
     _forcevla_8hz_lora_config(
         name="forcevla_8hz_flip_box_lora",
-        repo_id="/root/autodl-tmp/dataset-8Hz/flip_box",
+        repo_id=_dataset_8hz_path("flip_box"),
         asset_id="dataset_8hz_flip_box",
         num_train_steps=10_000,
         batch_size=4,
     ),
     _forcevla_8hz_lora_config(
         name="forcevla_8hz_insert_plug_lora",
-        repo_id="/root/autodl-tmp/dataset-8Hz/insert_plug",
+        repo_id=_dataset_8hz_path("insert_plug"),
         asset_id="dataset_8hz_insert_plug",
         num_train_steps=10_000,
         batch_size=4,
     ),
     _forcevla_8hz_lora_config(
         name="forcevla_8hz_press_button_lora",
-        repo_id="/root/autodl-tmp/dataset-8Hz/press_button",
+        repo_id=_dataset_8hz_path("press_button"),
         asset_id="dataset_8hz_press_button",
         num_train_steps=10_000,
         batch_size=4,
     ),
     _forcevla_8hz_lora_config(
         name="forcevla_8hz_wipe_board_lora",
-        repo_id="/root/autodl-tmp/dataset-8Hz/wipe_board",
+        repo_id=_dataset_8hz_path("wipe_board"),
         asset_id="dataset_8hz_wipe_board",
         num_train_steps=10_000,
         batch_size=4,
